@@ -1,5 +1,5 @@
 
-This is the official implementation of our paper **Multimodal Fusion with LLM Content via Hierarchical Progressive Transformer for Explainable Fake News Detection**
+This is the official implementation of **LLM-MFEFND**
 ##dataset
 Original dataset from weibo21 and FineFake
 
