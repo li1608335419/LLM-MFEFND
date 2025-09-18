@@ -149,121 +149,6 @@ class MultiDomainFENDModel(torch.nn.Module):
             self.mlp_star_f1_list.append(nn.Linear(emb_size * 4, 2 * emb_size))
             self.mlp_star_f2_list.append(nn.Linear(2 * emb_size, emb_size))
 
-    def fusion_img_text(self, image_emb, text_emb, fusion_emb, background_emb, comment_emb,
-                        mlp_img, mlp_text, mlp_fusion, mlp_background, mlp_comment,
-                        transformers, mlp_star_f1, mlp_star_f2, num_layers):
-        # 图像特征序列构建（已恢复）
-        for img_feature_num in range(0, self.feature_num):
-            if img_feature_num == 0:
-                img_feature_seq = mlp_img[img_feature_num](image_emb)
-                img_feature_seq = img_feature_seq.unsqueeze(1)
-            else:
-                img_feature_seq = torch.cat(
-                    (img_feature_seq, mlp_img[img_feature_num](image_emb).unsqueeze(1)), 1)
-
-        # 文本特征序列构建
-        # 文本特征序列构建
-        for text_feature_num in range(0, self.feature_num):
-            if text_feature_num == 0:
-                text_feature_seq = mlp_text[text_feature_num](text_emb)
-                text_feature_seq = text_feature_seq.unsqueeze(1)
-            else:
-                text_feature_seq = torch.cat(
-                    (text_feature_seq, mlp_text[text_feature_num](text_emb).unsqueeze(1)), 1)
-
-        for text_feature_num in range(0, self.feature_num):
-             if text_feature_num == 0:
-                 fusion_feature_seq = mlp_fusion[text_feature_num](fusion_emb)
-                 fusion_feature_seq = fusion_feature_seq.unsqueeze(1)
-             else:
-                 fusion_feature_seq = torch.cat(
-                     (fusion_feature_seq, mlp_fusion[text_feature_num](fusion_emb).unsqueeze(1)), 1)
-
-        # 背景特征序列构建
-        for text_feature_num in range(0, self.feature_num):
-            if text_feature_num == 0:
-                background_seq = mlp_background[text_feature_num](background_emb)
-                background_seq = background_seq.unsqueeze(1)
-            else:
-                background_seq = torch.cat(
-                    (background_seq, mlp_background[text_feature_num](background_emb).unsqueeze(1)), 1)
-
-        # 评论特征序列构建
-        for text_feature_num in range(0, self.feature_num):
-            if text_feature_num == 0:
-                comment_seq = mlp_comment[text_feature_num](comment_emb)
-                comment_seq = comment_seq.unsqueeze(1)
-            else:
-                comment_seq = torch.cat(
-                    (comment_seq, mlp_comment[text_feature_num](comment_emb).unsqueeze(1)), 1)
-
-        # 用文本初始化 star_emb
-        star_emb1 = text_feature_seq[:, 0, :]
-        star_emb2 = text_feature_seq[:, 1, :]
-        star_emb3 = text_feature_seq[:, 2, :]
-        star_emb4 = text_feature_seq[:, 3, :]
-
-        for sa_i in range(0, 3 * num_layers, 3):
-            # 文本交互
-            trans_text_item = torch.cat(
-                [star_emb1.unsqueeze(1), star_emb2.unsqueeze(1), star_emb3.unsqueeze(1), star_emb4.unsqueeze(1),
-                 text_feature_seq], 1)
-            text_output = transformers[sa_i + 5](trans_text_item)
-            star_emb1 = (text_output[:, 0, :] + star_emb1) / 2
-            star_emb2 = (text_output[:, 1, :] + star_emb2) / 2
-            star_emb3 = (text_output[:, 2, :] + star_emb3) / 2
-            star_emb4 = (text_output[:, 3, :] + star_emb4) / 2
-            text_feature_seq = text_output[:, 4:self.feature_num + 4, :] + text_feature_seq
-
-            # 图像交互（已恢复）
-            trans_img_item = torch.cat(
-                [star_emb1.unsqueeze(1), star_emb2.unsqueeze(1), star_emb3.unsqueeze(1), star_emb4.unsqueeze(1),
-                 img_feature_seq], 1)
-            img_output = transformers[sa_i + 4](trans_img_item)
-            star_emb1 = (img_output[:, 0, :] + star_emb1) / 2
-            star_emb2 = (img_output[:, 1, :] + star_emb2) / 2
-            star_emb3 = (img_output[:, 2, :] + star_emb3) / 2
-            star_emb4 = (img_output[:, 3, :] + star_emb4) / 2
-            img_feature_seq = img_output[:, 4:self.feature_num + 4, :] + img_feature_seq
-
-            trans_fusion_item = torch.cat(
-                 [star_emb1.unsqueeze(1), star_emb2.unsqueeze(1), star_emb3.unsqueeze(1), star_emb4.unsqueeze(1),
-                  fusion_feature_seq], 1)
-            fusion_output = transformers[sa_i + 3](trans_fusion_item)
-            star_emb1 = (fusion_output[:, 0, :] + star_emb1) / 2
-            star_emb2 = (fusion_output[:, 1, :] + star_emb2) / 2
-            star_emb3 = (fusion_output[:, 2, :] + star_emb3) / 2
-            star_emb4 = (fusion_output[:, 3, :] + star_emb4) / 2
-            fusion_feature_seq = fusion_output[:, 4:self.feature_num + 4, :] + fusion_feature_seq
-
-            # 背景交互
-            trans_ba_item = torch.cat(
-                [star_emb1.unsqueeze(1), star_emb2.unsqueeze(1), star_emb3.unsqueeze(1), star_emb4.unsqueeze(1),
-                 background_seq], 1)
-            background_output = transformers[sa_i + 2](trans_ba_item)
-            star_emb1 = (background_output[:, 0, :] + star_emb1) / 2
-            star_emb2 = (background_output[:, 1, :] + star_emb2) / 2
-            star_emb3 = (background_output[:, 2, :] + star_emb3) / 2
-            star_emb4 = (background_output[:, 3, :] + star_emb4) / 2
-            background_seq = background_output[:, 4:self.feature_num + 4, :] + background_seq
-
-            # 评论交互
-            trans_comments_item = torch.cat(
-                [star_emb1.unsqueeze(1), star_emb2.unsqueeze(1), star_emb3.unsqueeze(1), star_emb4.unsqueeze(1),
-                 comment_seq], 1)
-            comments_output = transformers[sa_i](trans_comments_item)
-            star_emb1 = (comments_output[:, 0, :] + star_emb1) / 2
-            star_emb2 = (comments_output[:, 1, :] + star_emb2) / 2
-            star_emb3 = (comments_output[:, 2, :] + star_emb3) / 2
-            star_emb4 = (comments_output[:, 3, :] + star_emb4) / 2
-            comment_seq = comments_output[:, 4:self.feature_num + 4, :] + comment_seq
-
-        # 输出层
-        item_emb_trans = self.dropout2(torch.cat([star_emb1, star_emb2, star_emb3, star_emb4], 1))
-        item_emb_trans = self.dropout2(self.active(mlp_star_f1(item_emb_trans)))
-        item_emb_trans = self.dropout2(self.active(mlp_star_f2(item_emb_trans)))
-        return item_emb_trans
-
     def forward(self, **kwargs):
         content, content_masks = kwargs['content'], kwargs['content_masks']
         background, background_masks = kwargs['background'], kwargs['background_masks']
@@ -447,4 +332,5 @@ class Trainer():
                 #category.extend(batch_category.detach().cpu().numpy().tolist())
 
         return metrics1(label, pred)
+
 
