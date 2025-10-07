@@ -6,7 +6,7 @@ Original dataset from weibo21 and FineFake
 Due to dataset ownership and privacy issues, we cannot make the full dataset publicly available, if you would like the dataset processed in a format that allows for easy reproduction of the code, please contact
 2024112032016@stu.hznu.edu.cn
 
-
+We plan to release the full code after the anonymous review process is completed, to avoid potential misuse and prevent any possible losses.
 
 ## Requirements
 
